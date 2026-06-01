@@ -14,7 +14,7 @@ manage analysis jobs.
 REDS is currently invite/demo-based. To request **demo access** and an API
 token, visit <https://rationaledge.io> and apply through the site, or email the
 team at <reds@rationaledge.io> with a short note about your use case (e.g. IR
-triage or threat-actor tracking). You will need an API token before any of the
+triage or threat-actor tracking). You need an API token before any of the
 commands below will work — see [Authentication](#authentication).
 
 ## Requirements
@@ -256,18 +256,12 @@ In `--json` mode, errors are also printed to stderr as a JSON envelope
 
 Bug reports and patches are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md).
 
-- **Reporting issues** — open an issue on the project's issue tracker, or email
-  <reds@rationaledge.io>. Include the command you ran, the output from re-running
+- **Reporting issues** — open an issue and include the command you ran, the output from re-running
   it with `--debug`, your OS, and `python3 --version`. Do not paste an API token
   (the client only shows the first/last few characters of it in `--debug` output,
   but double-check before sharing).
 - **No third-party dependencies** — the client is intentionally single-file and
   standard-library only; please keep it that way.
-- **Running the tests** — the suite is standard-library only:
-
-  ```sh
-  python3 -m unittest discover -s tests -v
-  ```
 
 ## License
 

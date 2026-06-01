@@ -311,6 +311,9 @@ class REDSClient:
     def download(self, hash_value):
         return self._request("GET", f"/download/{hash_value}", raw=True)
 
+    def download_raw(self, hash_value):
+        return self._request("GET", f"/download/{hash_value}/raw", raw=True)
+
     # -- metadata -----------------------------------------------------------
     def collections(self):
         return self._request("GET", "/collections")
@@ -791,15 +794,38 @@ def cmd_queue(client, args):
 
 def cmd_download(client, args):
     h = validate_hash(args.hash)
-    blob = client.download(h)
-    out_path = args.output or f"{h}.zip"
+    if args.raw and args.extract:
+        raise REDSError("--raw returns the unwrapped binary directly; it "
+                        "cannot be combined with --extract.")
+
+    if args.raw:
+        blob = client.download_raw(h)
+        out_path = args.output or f"{h}.bin"
+    else:
+        try:
+            blob = client.download(h)
+        except REDSAPIError as exc:
+            if exc.status == 413:
+                raise REDSError(
+                    "Sample is too large to zip on the fly (HTTP 413). "
+                    "Re-run with --raw to fetch the unwrapped binary.")
+            raise
+        out_path = args.output or f"{h}.zip"
+
     try:
         with open(out_path, "wb") as fh:
             fh.write(blob)
     except OSError as exc:
         raise REDSError(f"Cannot write '{out_path}': {exc.strerror or exc}")
-    result = {"saved": out_path, "bytes": len(blob),
-              "zip_password": ZIP_PASSWORD.decode()}
+
+    result = {"saved": out_path, "bytes": len(blob)}
+    if args.raw:
+        result["raw"] = True
+        result["warning"] = ("unprotected malware binary - handle only in an "
+                             "isolated/sandboxed environment")
+        return result
+
+    result["zip_password"] = ZIP_PASSWORD.decode()
     if args.extract:
         dest = args.extract_dir or "."
         try:
@@ -1019,6 +1045,10 @@ def build_parser():
     p = add("download", "Download a sample as a password-protected ZIP "
                         "(use -o/--output for the path, default <hash>.zip).")
     p.add_argument("hash", help="MD5, SHA1 or SHA256 hash")
+    p.add_argument("--raw", action="store_true",
+                   help="download the unwrapped raw binary instead of a ZIP "
+                        "(no password; for large samples that 413 when zipped) "
+                        "- handle only in a sandbox")
     p.add_argument("--extract", action="store_true",
                    help="extract the ZIP (password: infected)")
     p.add_argument("--extract-dir", help="extraction directory")
